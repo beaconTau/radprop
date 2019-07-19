@@ -1,3 +1,11 @@
+/**
+ * This file has been modified for radprop from SPLAT v.1.4.2.  See the original note below.
+ *
+ *  Changes for radprop:
+ *
+ *   staticifying most methods not intended to be public. 
+ */
+
 /********************************************************************************
 * ITWOM version 3.0a, January 20, 2011  File: itwom3.0a.cpp                     *
 * Provenance:   Further test version of itwom2.0m re adj to Hrzn range factors  *
@@ -107,7 +115,7 @@ struct propa_type
 	double tha;
 };
 
-int mymin(const int &i, const int &j)
+static int mymin(const int &i, const int &j)
 {
 	if (i<j)
 		return i;
@@ -115,7 +123,7 @@ int mymin(const int &i, const int &j)
 		return j;
 }
 
-int mymax(const int &i, const int &j)
+static int mymax(const int &i, const int &j)
 {
 	if (i>j)
 		return i;
@@ -123,7 +131,7 @@ int mymax(const int &i, const int &j)
 		return j;
 }
 
-double mymin(const double &a, const double &b)
+static double mymin(const double &a, const double &b)
 {
 	if (a<b)
 		return a;
@@ -131,7 +139,7 @@ double mymin(const double &a, const double &b)
 		return b;
 }
 
-double mymax(const double &a, const double &b)
+static double mymax(const double &a, const double &b)
 {
 	if (a>b)
 		return a;
@@ -139,7 +147,7 @@ double mymax(const double &a, const double &b)
 		return b;
 }
 
-double FORTRAN_DIM(const double &x, const double &y)
+static double FORTRAN_DIM(const double &x, const double &y)
 {
 	 /* This performs the FORTRAN DIM function.  Result is x-y
 	    if x is greater than y; otherwise result is 0.0 */
@@ -150,7 +158,7 @@ double FORTRAN_DIM(const double &x, const double &y)
 		return 0.0;
 }
 
-double aknfe(const double &v2)
+static double aknfe(const double &v2)
 {
 	double a;
 
@@ -161,7 +169,7 @@ double aknfe(const double &v2)
 	return a;
 }
 
-double fht(const double& x, const double& pk)
+static double fht(const double& x, const double& pk)
 {
 	double w, fhtv;
 
@@ -193,7 +201,7 @@ double fht(const double& x, const double& pk)
 	return fhtv;
 }
 
-double h0f(double r, double et)
+static double h0f(double r, double et)
 {
 	double a[5]={25.0, 80.0, 177.0, 395.0, 705.0};
 	double b[5]={24.0, 45.0,  68.0,  80.0, 105.0};
@@ -231,7 +239,7 @@ double h0f(double r, double et)
 	return h0fv;
 }
 
-double ahd(double td)
+static double ahd(double td)
 {
 	int i;
 	double a[3]={   133.4,    104.6,     71.8};
@@ -250,12 +258,12 @@ double ahd(double td)
 	return a[i]+b[i]*td+c[i]*log(td);
 }
 
-double abq_alos(complex<double> r)
+static double abq_alos(complex<double> r)
 {
 	return r.real()*r.real()+r.imag()*r.imag();
 }
 
-double saalos(double d, prop_type &prop, propa_type &propa)
+static double saalos(double d, prop_type &prop, propa_type &propa)
 {
 	double ensa, encca, q, dp, dx, tde, hc, ucrpc, ctip, tip, tic, stic, ctic, sta;	
 	double ttc, cttc, crpc, ssnps, d1a, rsp, tsp, arte, zi, pd, pdk, hone, tvsr;
@@ -418,7 +426,7 @@ double saalos(double d, prop_type &prop, propa_type &propa)
 }			
 
 
-double adiff(double d, prop_type &prop, propa_type &propa)
+static double adiff(double d, prop_type &prop, propa_type &propa)
 {
 	complex<double> prop_zgnd(prop.zgndreal,prop.zgndimag);
 	static double wd1, xd1, afo, qk, aht, xht;
@@ -475,7 +483,7 @@ double adiff(double d, prop_type &prop, propa_type &propa)
 	return adiffv;
 }
 
-double adiff2(double d, prop_type &prop, propa_type &propa)
+static double adiff2(double d, prop_type &prop, propa_type &propa)
 {
 	complex<double> prop_zgnd(prop.zgndreal,prop.zgndimag);
 	static double wd1, xd1, qk, aht, xht, toh, toho, roh, roho, dto, dto1, dtro, dro, 
@@ -752,7 +760,7 @@ double adiff2(double d, prop_type &prop, propa_type &propa)
 	return adiffv2;
 }
 
-double ascat( double d, prop_type &prop, propa_type &propa)
+static double ascat( double d, prop_type &prop, propa_type &propa)
 {
 	static double ad, rr, etq, h0s;
 	double h0, r1, r2, z0, ss, et, ett, th, q;
@@ -825,7 +833,7 @@ double ascat( double d, prop_type &prop, propa_type &propa)
 	return ascatv;
 }
 
-double qerfi(double q)
+static double qerfi(double q)
 {
 	double x, t, v;
 	double c0=2.515516698;
@@ -846,7 +854,7 @@ double qerfi(double q)
 	return v;
 }
 
-void qlrps(double fmhz, double zsys, double en0, int ipol, double eps, double sgm, prop_type &prop)
+static void qlrps(double fmhz, double zsys, double en0, int ipol, double eps, double sgm, prop_type &prop)
 {
 	double gma=157e-9;
 
@@ -869,7 +877,7 @@ void qlrps(double fmhz, double zsys, double en0, int ipol, double eps, double sg
 	
 }
 
-double alos(double d, prop_type &prop, propa_type &propa)
+static double alos(double d, prop_type &prop, propa_type &propa)
 {
 	complex<double> prop_zgnd(prop.zgndreal,prop.zgndimag);
 	static double wls;
@@ -908,7 +916,7 @@ double alos(double d, prop_type &prop, propa_type &propa)
 }
 
 
-double alos2(double d, prop_type &prop, propa_type &propa)
+static double alos2(double d, prop_type &prop, propa_type &propa)
 {
 	complex<double> prop_zgnd(prop.zgndreal,prop.zgndimag);
 	complex<double> r;
@@ -1008,7 +1016,7 @@ double alos2(double d, prop_type &prop, propa_type &propa)
 	return alosv;
 }
 
-void qlra(int kst[], int klimx, int mdvarx, prop_type &prop, propv_type &propv)
+static void qlra(int kst[], int klimx, int mdvarx, prop_type &prop, propv_type &propv)
 {
 	double q;
 
@@ -1051,7 +1059,7 @@ void qlra(int kst[], int klimx, int mdvarx, prop_type &prop, propv_type &propv)
 }
 
 
-void lrprop (double d, prop_type &prop, propa_type &propa)
+static void lrprop (double d, prop_type &prop, propa_type &propa)
 {
 	/* PaulM_lrprop used for ITM */
 	static bool wlos, wscat;
@@ -1231,7 +1239,7 @@ void lrprop (double d, prop_type &prop, propa_type &propa)
 
 
 
-void lrprop2(double d, prop_type &prop, propa_type &propa)
+static void lrprop2(double d, prop_type &prop, propa_type &propa)
 {
 	/* ITWOM_lrprop2 */
 	static bool wlos, wscat;
@@ -1485,7 +1493,7 @@ void lrprop2(double d, prop_type &prop, propa_type &propa)
 }
 
 
-double curve (double const &c1, double const &c2, double const &x1,
+static double curve (double const &c1, double const &c2, double const &x1,
               double const &x2, double const &x3, double const &de)
 {
 	/* return (c1+c2/(1.0+pow((de-x2)/x3,2.0)))*pow(de/x1,2.0)/(1.0+pow(de/x1,2.0)); */
@@ -1500,7 +1508,7 @@ double curve (double const &c1, double const &c2, double const &x1,
 	return (c1+c2/(1.0+temp1))*temp2/(1.0+temp2);
 }
 
-double avar(double zzt, double zzl, double zzc, prop_type &prop, propv_type &propv)
+static double avar(double zzt, double zzl, double zzc, prop_type &prop, propv_type &propv)
 {
 	static	int kdv;
 	static	double dexa, de, vmd, vs0, sgl, sgtm, sgtp, sgtd, tgtd,
@@ -1707,7 +1715,7 @@ double avar(double zzt, double zzl, double zzc, prop_type &prop, propv_type &pro
 }
 
 
-void hzns(double pfl[], prop_type &prop)
+static void hzns(double pfl[], prop_type &prop)
 {	
 	/* Used only with ITM 1.2.2 */
 	bool wq;
@@ -1760,7 +1768,7 @@ void hzns(double pfl[], prop_type &prop)
 }
  
 
-void hzns2(double pfl[], prop_type &prop, propa_type &propa)
+static void hzns2(double pfl[], prop_type &prop, propa_type &propa)
 {
 	bool wq;
 	int np, rp, i, j;
@@ -1849,7 +1857,7 @@ void hzns2(double pfl[], prop_type &prop, propa_type &propa)
 }
 
   
-void z1sq1 (double z[], const double &x1, const double &x2, double& z0, double& zn)
+static void z1sq1 (double z[], const double &x1, const double &x2, double& z0, double& zn)
 {
 	/* Used only with ITM 1.2.2 */
 	double xn, xa, xb, x, a, b;
@@ -1888,7 +1896,7 @@ void z1sq1 (double z[], const double &x1, const double &x2, double& z0, double& 
 	zn=a+b*(xn-xb);
 }
 
-void z1sq2(double z[], const double &x1, const double &x2, double& z0, double& zn)
+static void z1sq2(double z[], const double &x1, const double &x2, double& z0, double& zn)
 {
 	/* corrected for use with ITWOM */
 	double xn, xa, xb, x, a, b, bn;
@@ -1930,7 +1938,7 @@ void z1sq2(double z[], const double &x1, const double &x2, double& z0, double& z
 	zn=a+(b*(xn-xb));
 }
 
-double qtile (const int &nn, double a[], const int &ir)
+static double qtile (const int &nn, double a[], const int &ir)
 {
 	double q=0.0, r; /* q initialization -- KD2BD */
 	int m, n, i, j, j1=0, i0=0, k;  /* more initializations -- KD2BD */
@@ -1999,7 +2007,7 @@ double qtile (const int &nn, double a[], const int &ir)
 	return q;
 }
 
-double qerf(const double &z)
+static double qerf(const double &z)
 {
 	double b1=0.319381530, b2=-0.356563782, b3=1.781477937;
 	double b4=-1.821255987, b5=1.330274429;
@@ -2024,7 +2032,7 @@ double qerf(const double &z)
 }
 
 
-double d1thx(double pfl[], const double &x1, const double &x2)
+static double d1thx(double pfl[], const double &x1, const double &x2)
 {
 	int np, ka, kb, n, k, j;
 	double d1thxv, sn, xa, xb;
@@ -2079,7 +2087,7 @@ double d1thx(double pfl[], const double &x1, const double &x2)
 }
 
 
-double d1thx2(double pfl[], const double &x1, const double &x2, propa_type &propa)
+static double d1thx2(double pfl[], const double &x1, const double &x2, propa_type &propa)
 {
 	int np, ka, kb, n, k, kmx, j;
 	double d1thx2v, sn, xa, xb, xc;
@@ -2134,7 +2142,7 @@ double d1thx2(double pfl[], const double &x1, const double &x2, propa_type &prop
 }
 
 
-void qlrpfl(double pfl[], int klimx, int mdvarx, prop_type &prop, propa_type &propa, propv_type &propv)
+static void qlrpfl(double pfl[], int klimx, int mdvarx, prop_type &prop, propa_type &propa, propv_type &propv)
 {
 	int np, j;
 	double xl[2], q, za, zb, temp;
@@ -2206,7 +2214,7 @@ void qlrpfl(double pfl[], int klimx, int mdvarx, prop_type &prop, propa_type &pr
 	lrprop(0.0,prop,propa);
 }
 
-void qlrpfl2(double pfl[], int klimx, int mdvarx, prop_type &prop, propa_type &propa, propv_type &propv)
+static void qlrpfl2(double pfl[], int klimx, int mdvarx, prop_type &prop, propa_type &propa, propv_type &propv)
 {
 	int np, j;
 	double xl[2], dlb, q, za, zb, temp, rad, rae1, rae2;
@@ -2314,7 +2322,7 @@ void qlrpfl2(double pfl[], int klimx, int mdvarx, prop_type &prop, propa_type &p
 	lrprop2(0.0,prop,propa);
 }
 
-double deg2rad(double d)
+static double deg2rad(double d)
 {
 	return d*3.1415926535897/180.0;
 }
@@ -2767,7 +2775,7 @@ void point_to_pointDH (double elev[], double tht_m, double rht_m,
 //* Area Mode Calculations                               *
 //********************************************************
 
-void area(long ModVar, double deltaH, double tht_m, double rht_m, double dist_km, int TSiteCriteria, int RSiteCriteria, double eps_dielect, double sgm_conductivity, double eno_ns_surfref, double enc_ncc_clcref, double clutter_height, double clutter_density, double delta_h_diff, double frq_mhz, int radio_climate, int pol, int mode_var,
+static void area(long ModVar, double deltaH, double tht_m, double rht_m, double dist_km, int TSiteCriteria, int RSiteCriteria, double eps_dielect, double sgm_conductivity, double eno_ns_surfref, double enc_ncc_clcref, double clutter_height, double clutter_density, double delta_h_diff, double frq_mhz, int radio_climate, int pol, int mode_var,
 double pctTime, double pctLoc, double pctConf, double &dbloss, char *strmode, int &errnum)
 {
 	// pol: 0-Horizontal, 1-Vertical
