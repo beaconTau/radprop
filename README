@@ -1,0 +1,4 @@
+RF Propagation Utilities
+
+Requires ROOT, GeographicLib
+GDAL for reading in geotiff 
