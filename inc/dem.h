@@ -10,11 +10,8 @@
  ***/ 
 
 #include "TH2.h" 
+#include "radprop/coord.h" 
 
-namespace GeographicLib
-{
-  class GeoCoords; 
-}
 
 namespace radprop
 {
@@ -38,8 +35,18 @@ namespace radprop
       DEM(const char * file, int stereo=0, 
           const double * bounds = NULL, bool verbose = false); 
 
-      double getHeight(const GeographicLib::GeoCoords & where,  bool MSL=true ) const { return 0;}
-      double * getHeightsBetween(int howmany,  const GeographicLib::GeoCoords & start, const GeographicLib::GeoCoords & stop, double * fill = 0,  bool MSL = true) const { return 0; }
+      /** Returns the height at the given position (interpolating the DEM 
+       * Returns -999 if out of range. 
+       *
+       * */ 
+      double getHeight(const SurfaceCoord & where,  bool MSL=true ) const;
+      
+      /** Retrieves howmany heights between two points. If fill is passed, it will be filled (and returned) otherwise a new array is allocated. if X is passed, the distances are 
+       *  from the start are filled there (useful for plotting). 
+       */ 
+
+      double * getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop,
+                                  double * fill = 0,  bool MSL = true, double * X =0 ) const; 
 
 
       const TH2 * getHist() const { return &the_hist; } 

@@ -24,8 +24,8 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR} ${GDAL_INCLUDE_DIRS} ${GEOGRAPHICLIB_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src )
 
-set (HEADER_FILES radprop/dem.h ) 
-set (SOURCE_FILES src/dem.cc )  
+set (HEADER_FILES radprop/dem.h radprop/coord.h) 
+set (SOURCE_FILES src/dem.cc src/coord.cc)  
 
 set(DICTNAME G__${libname})
 

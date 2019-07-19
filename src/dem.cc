@@ -9,11 +9,14 @@
 #include <gdal_priv.h> 
 #endif 
 
-
-
+#include <GeographicLib/Geoid.hpp> 
+#include <GeographicLib/GeodesicLine.hpp> 
+#include <GeographicLib/Geodesic.hpp> 
 
 static int dem_counter = 0;
 
+
+static GeographicLib::Geoid geoid("EGS84","",true,true); 
 
 
 #ifdef HAVE_GDAL
@@ -53,19 +56,6 @@ static int setupFromGDAL(const char * file, TH2F & h, const double * bounds, int
   {
     fprintf(stderr,"WARNING, this looks like it might not be a stereographic projection!\n"); 
   }
-
-  if (stereo && probably_stereo) 
-  {
-    if (stereo > 0 && strcasestr(projection,"northing"))
-    {
-      fprintf(stderr,"WARNING, this looks like it might be a South-Pole stereographic projection !\n"); 
-    }
-    else if (stereo < 0 && strcasestr(projection,"southing"))
-    {
-      fprintf(stderr,"WARNING, this looks like it might be a North-Pole stereographic projection !\n"); 
-    }
-  }
-  
 
   if (verbose && projection) printf("Projection: %s\n", projection); 
 
@@ -341,7 +331,7 @@ radprop::DEM::DEM(const char * file,
   if (stereo) 
   {
     the_hist.GetXaxis()->SetTitle("Easting"); 
-    the_hist.GetYaxis()->SetTitle(stereo < 0 ? "Northing" : "Southing"); 
+    the_hist.GetYaxis()->SetTitle("Northing"); 
   }
   else
   {
@@ -353,6 +343,75 @@ radprop::DEM::DEM(const char * file,
 }
 
 
+
+double radprop::DEM::getHeight(const SurfaceCoord & where, bool msl) const
+{
+  double x,y; 
+
+
+
+  if (!stereo)
+  {
+    SurfaceCoord wgs84 = where.as(SurfaceCoord::WGS84); 
+    x = wgs84.x;//lon 
+    y = wgs84.y;//lat 
+  }
+  else
+  {
+    SurfaceCoord s = where.as(stereo < 0 ? SurfaceCoord::SP_Stereographic : SurfaceCoord::NP_Stereographic); 
+    x = s.x;
+    y = s.y;
+  }
+
+
+  //why the hell is interpolate not const? 
+  TH2 * h = (TH2*) (&the_hist); 
+  
+  double alt = h->Interpolate(x,y); 
+
+  if (msl) 
+  {
+    SurfaceCoord wgs84 = where.as(SurfaceCoord::WGS84); 
+    //hopefully this is the right way! 
+    alt = geoid.ConvertHeight(wgs84.y, wgs84.x, alt, GeographicLib::Geoid::ELLIPSOIDTOGEOID); 
+  }
+
+  return alt; 
+}
+
+
+double * radprop::DEM::getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop,
+                                  double * fill,  bool msl , double * X ) const 
+{
+
+  double * H = fill ?: new double[howmany]; 
+  SurfaceCoord x0 = start.as(SurfaceCoord::WGS84); 
+  SurfaceCoord x1 = stop.as(SurfaceCoord::WGS84); 
+
+  //first solve the inverse geodesic problem 
+  const GeographicLib::Geodesic & geod = GeographicLib::Geodesic::WGS84(); 
+  double az12, az21, s12; 
+  geod.Inverse(x0.y,x0.x, x1.y,x1.x, s12,az12, az21); 
+
+  //now make the geodesic line
+  GeographicLib::GeodesicLine  l(geod, x0.y,x0.x, az12); 
+
+
+  double dx = s12/(howmany-1); 
+
+
+  for (int i = 0; i < howmany; i++) 
+  {
+    double lat, lon; 
+    double x = i*dx; 
+    l.Position(x, lat,lon); 
+
+    H[i] = getHeight( SurfaceCoord(lon,lat, SurfaceCoord::WGS84), msl); 
+    if (X) X[i] = x; 
+  }
+
+  return H; 
+}
 
 
 
