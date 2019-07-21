@@ -16,7 +16,7 @@
 static int dem_counter = 0;
 
 
-static GeographicLib::Geoid geoid("EGS84","",true,true); 
+static GeographicLib::Geoid geoid("egm96-5","",true,true); 
 
 
 #ifdef HAVE_GDAL
@@ -380,7 +380,7 @@ double radprop::DEM::getHeight(const SurfaceCoord & where, bool msl) const
 }
 
 
-double * radprop::DEM::getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop,
+double * radprop::DEM::getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop, double * fill_dx, 
                                   double * fill,  bool msl , double * X ) const 
 {
 
@@ -393,11 +393,13 @@ double * radprop::DEM::getHeightsBetween(int howmany,  const SurfaceCoord & star
   double az12, az21, s12; 
   geod.Inverse(x0.y,x0.x, x1.y,x1.x, s12,az12, az21); 
 
+
   //now make the geodesic line
   GeographicLib::GeodesicLine  l(geod, x0.y,x0.x, az12); 
 
 
   double dx = s12/(howmany-1); 
+  if (fill_dx) *fill_dx = dx; 
 
 
   for (int i = 0; i < howmany; i++) 

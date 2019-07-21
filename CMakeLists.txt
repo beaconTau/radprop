@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.10)
 
 project(radprop)
 set(libname "radprop")
+set(CMAKE_CXX_STANDARD 11)
 
 list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 
@@ -22,10 +23,10 @@ endif()
 
 
 
-include_directories(${PROJECT_SOURCE_DIR} ${GDAL_INCLUDE_DIRS} ${GEOGRAPHICLIB_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src )
+include_directories(${PROJECT_SOURCE_DIR} ${GDAL_INCLUDE_DIRS} ${GeographicLib_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src )
 
-set (HEADER_FILES radprop/dem.h radprop/coord.h) 
-set (SOURCE_FILES src/dem.cc src/coord.cc)  
+set (HEADER_FILES radprop/dem.h radprop/coord.h radprop/prop.h) 
+set (SOURCE_FILES src/dem.cc src/coord.cc src/prop.cc src/itwom3.0.cpp)  
 
 set(DICTNAME G__${libname})
 
@@ -38,9 +39,23 @@ add_library(${libname} SHARED ${SOURCE_FILES} ${DICTNAME}.cxx)
 
 if(GDAL_FOUND) 
   add_definitions( -DHAVE_GDAL )
-  target_link_libraries(${libname} ${GDAL_LIBRARIES} ${ZLIB_LIBRARIES} ${ROOT_LIBRARIES} ${GEOGRAPHICLIB_LIBRARIES} )
+  target_link_libraries(${libname} ${GDAL_LIBRARIES} ${ZLIB_LIBRARIES} ${ROOT_LIBRARIES} ${GeographicLib_LIBRARIES} )
 else()
-  target_link_libraries(${libname} ${ZLIB_LIBRARIES} ${ROOT_LIBRARIES} ${GEOGRAPHICLIB_LIBRARIES} )
+  target_link_libraries(${libname} ${ZLIB_LIBRARIES} ${ROOT_LIBRARIES} ${GeographicLib_LIBRARIES} )
+endif() 
+
+option ( ENABLE_OPENMP " Enable OpenMP for multicore usage") 
+if(ENABLE_OPENMP) 
+  FIND_PACKAGE( OpenMP REQUIRED)
+  if(OPENMP_FOUND)
+    message("OPENMP FOUND")
+    add_definitions (-DENABLE_OPENMP) 
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+  else() 
+    message(FATAL_ERROR "you tried to use openmp but Cmake couldn't find compiler support") 
+  endif() 
 endif() 
 
 

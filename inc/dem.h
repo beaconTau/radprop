@@ -45,7 +45,7 @@ namespace radprop
        *  from the start are filled there (useful for plotting). 
        */ 
 
-      double * getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop,
+      double * getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop, double * dx = 0, 
                                   double * fill = 0,  bool MSL = true, double * X =0 ) const; 
 
 

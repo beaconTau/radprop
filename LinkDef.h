@@ -8,5 +8,10 @@
 
 #pragma link C++ class radprop::DEM+;
 #pragma link C++ class radprop::SurfaceCoord+;
+#pragma link C++ struct radprop::PropagationOptions+;
+#pragma link C++ struct radprop::PropagationResult+;
+#pragma link C++ struct radprop::VerticalSliceResult+;
+#pragma link C++ struct radprop::HorizontalWedgeResult+;
+#pragma link C++ struct radprop::HorizontalBoxResult+;
 
 
