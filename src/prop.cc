@@ -144,8 +144,8 @@ int radprop::propagateVerticalSlice (
       }
       else
       {
-        propagate( nxbins-x+1, dx, 
-                   profile+x-1, 
+        propagate( variable_to_fixed ? nxbins-x+1 : x, dx, 
+                   variable_to_fixed ? profile+x-1 : profile, 
                    res, 
                    variable_to_fixed ? alt - profile[x-1] : fixed_height, 
                    variable_to_fixed ? fixed_height : alt - profile[x-1], 
