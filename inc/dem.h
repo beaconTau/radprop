@@ -39,14 +39,14 @@ namespace radprop
        * Returns -999 if out of range. 
        *
        * */ 
-      double getHeight(const SurfaceCoord & where,  bool MSL=true ) const;
+      double getHeight(const SurfaceCoord & where,  bool MSL=false ) const;
       
       /** Retrieves howmany heights between two points. If fill is passed, it will be filled (and returned) otherwise a new array is allocated. if X is passed, the distances are 
        *  from the start are filled there (useful for plotting). 
        */ 
 
       double * getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop, double * dx = 0, 
-                                  double * fill = 0,  bool MSL = true, double * X =0 ) const; 
+                                  double * fill = 0,  bool MSL = false, double * X =0 ) const; 
 
 
       const TH2 * getHist() const { return &the_hist; } 
