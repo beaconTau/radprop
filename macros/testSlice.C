@@ -5,6 +5,8 @@
  * */ 
 
 
+
+void testSlice(bool vary_tx = true)
 {
 
   gStyle->SetPalette(kRainBow); 
@@ -13,18 +15,26 @@
   radprop::SurfaceCoord test(-118.2379382, 37.5898841);//approx beacon location 
   radprop::PropagationOptions opt; 
   opt.frequency = 50; //50 MHz 
+  //opt.method = radprop::PropagationOptions::METHOD_ITM; 
 
   //make a 5 canvas thing 
   TCanvas * c = new TCanvas("c1","c1", 1800,1000); 
-  c->Divide(1,5); 
+  c->Divide(2,5); 
   int ci = 1; 
+  TFile f(Form("test_%s.root",vary_tx ? "vary_tx" : "vary_rx"), "RECREATE"); 
+
   for (int bearing = 70; bearing <=110; bearing+=10)
   {
     c->cd(ci++); 
     radprop::VerticalSliceResult * r = new radprop::VerticalSliceResult;
-    radprop::propagateVerticalSlice(*r,test,dem, 100e3, bearing, 2000, 200, 1, 1000, true,opt);
+    radprop::propagateVerticalSlice(*r,test,dem, 100e3, bearing, 2000, 200, 1, 1000, vary_tx,opt);
 
-    r->pathloss.SetTitle(Form("bearing = %d",bearing)); 
+    r->pathloss.SetTitle(Form("path loss bearing = %d",bearing)); 
     r->Draw(); 
+    c->cd(ci++); 
+    r->mode.SetTitle(Form("propagation mode, bearing = %d",bearing)); 
+    r->mode.Draw("col2z"); 
+    r->Write(Form("bearing_%d", bearing)); 
   }
+
 }
