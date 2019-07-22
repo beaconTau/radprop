@@ -2,8 +2,12 @@
 #include "radprop/dem.h" 
 #include "radprop/coord.h" 
 #include "GeographicLib/Geodesic.hpp" 
+#include "GeographicLib/GeodesicLine.hpp" 
 
 #include "prop_private.h" 
+
+ClassImp(radprop::VerticalSliceResult); 
+ClassImp(radprop::HorizontalWedgeResult); 
 
 const radprop::PropagationOptions & radprop::PropagationOptions::defaultPropagation()
 {
@@ -26,21 +30,23 @@ int radprop::propagate(int npts, double dx, const double *elev_in,
   memcpy(&elev[0] +2, elev_in, npts*sizeof(double)); //blah 
  
   char strmode[128];  
+  int imode;
   if (opt.method == PropagationOptions::METHOD_ITWOMv3) 
   {
     point_to_point(&elev[0], tx_height, rx_height, opt.surface_dielectric, opt.surface_conductivity, 
                    opt.sea_level_refractivity, opt.frequency, opt.radio_climate, opt.polarization,
-                   opt.fraction_of_situations, opt.fraction_of_time, r.dBloss, strmode, r.err, 
+                   opt.fraction_of_situations, opt.fraction_of_time, r.dBloss, strmode, r.err,imode, 
                    opt.clutter_refractivity, opt.clutter_height, opt.clutter_density, opt.mode_var, opt.delta_h_diff);
   }
   else 
   {
     point_to_point_ITM(&elev[0], tx_height, rx_height, opt.surface_dielectric, opt.surface_conductivity, 
                        opt.sea_level_refractivity, opt.frequency, opt.radio_climate, opt.polarization,
-                       opt.fraction_of_situations, opt.fraction_of_time, r.dBloss, strmode, r.err);
+                       opt.fraction_of_situations, opt.fraction_of_time, r.dBloss, strmode, r.err, imode);
   }
 
   r.mode = strmode; 
+  r.imode = (radprop::PropagationResult::PropagationMode) imode; 
   return r.err; 
 }
 
@@ -49,30 +55,11 @@ int radprop::propagate(int npts, const SurfaceCoord &  start, const SurfaceCoord
                        double tx_height, double rx_height, 
                        const PropagationOptions & opt)
 {
-  //avoid a copy here by directly filling the array! 
-
-  std::vector<double> elev(npts+2); 
-  elev[0]=npts-1; 
-  dem.getHeightsBetween(npts, start, stop, &elev[1], &elev[2]);
-  
- 
-  char strmode[128];  
-  if (opt.method == PropagationOptions::METHOD_ITWOMv3) 
-  {
-    point_to_point(&elev[0], tx_height, rx_height, opt.surface_dielectric, opt.surface_conductivity, 
-                   opt.sea_level_refractivity, opt.frequency, opt.radio_climate, opt.polarization, 
-                   opt.fraction_of_situations, opt.fraction_of_time, r.dBloss, strmode, r.err,
-                   opt.clutter_refractivity, opt.clutter_height, opt.clutter_density, opt.mode_var, opt.delta_h_diff);
-  }
-  else 
-  {
-    point_to_point_ITM(&elev[0], tx_height, rx_height, opt.surface_dielectric, opt.surface_conductivity, 
-                       opt.sea_level_refractivity, opt.frequency, opt.radio_climate, opt.polarization,
-                       opt.fraction_of_situations, opt.fraction_of_time, r.dBloss, strmode, r.err);
-  }
-
-  r.mode = strmode; 
-  return r.err; 
+  double dx; 
+  std::vector<double> elev(npts); 
+  dem.getHeightsBetween(npts, start, stop, &dx, &elev[0]);
+  //this makes an extra copy, but otherwise we have to duplicate a lot of code... 
+  return propagate(npts, dx, &elev[0], r, tx_height, rx_height, opt); 
 }
 
 
@@ -123,9 +110,15 @@ int radprop::propagateVerticalSlice (
   }
 
   result.pathloss.SetBins(nxbins,-dx/2,distance+dx/2, nybins, min_alt,max_alt); 
+  result.mode.SetBins(nxbins,-dx/2,distance+dx/2, nybins, min_alt,max_alt); 
+  result.err.SetBins(nxbins,-dx/2,distance+dx/2, nybins, min_alt,max_alt); 
 
   float * arr = result.pathloss.GetArray(); 
+  char * err_arr = result.err.GetArray(); 
+  char * mode_arr = result.mode.GetArray(); 
   result.pathloss.SetEntries(nxbins*nybins); 
+  result.mode.SetEntries(nxbins*nybins); 
+  result.err.SetEntries(nxbins*nybins); 
 
 #ifdef ENABLE_OPENMP
 #pragma omp parallel for 
@@ -141,6 +134,8 @@ int radprop::propagateVerticalSlice (
       if (alt <profile[x-1]) 
       {
         arr[bin] = -1; 
+        err_arr[bin] = -1; 
+        mode_arr[bin] = -1; 
       }
       else
       {
@@ -156,6 +151,8 @@ int radprop::propagateVerticalSlice (
 //          printf("%d %d %d: %g\n", x,y,bin,res.dBloss); 
           arr[bin] = res.dBloss; 
         }
+        mode_arr[bin] = (char) res.imode;
+        err_arr[bin] = res.err;
 
       }
 
@@ -165,7 +162,11 @@ int radprop::propagateVerticalSlice (
   }
 
   result.pathloss.SetStats(false); 
+  result.mode.SetStats(false); 
+  result.err.SetStats(false); 
   result.pathloss.SetTitle("Path loss; surface distance (m); altitude (m); path loss (dB)"); 
+  result.err.SetTitle("Path loss; surface distance (m); altitude (m); error code"); 
+  result.mode.SetTitle("Path loss; surface distance (m); altitude (m); mode"); 
   result.terrain_profile.SetFillStyle(1); 
   result.terrain_profile.SetFillColor(1); 
   result.terrain_profile.SetLineWidth(2); 
@@ -194,3 +195,130 @@ int radprop::propagateVerticalSlice(VerticalSliceResult & result,
 
 
 }
+
+
+int radprop::propagateHorizontalWedge(HorizontalWedgeResult & result, const SurfaceCoord & fixed_pos, const DEM & dem, 
+                                      double max_distance, int n_distance_points,  double min_bearing , double max_bearing , 
+                                      double dbearing, 
+                                      double fixed_height, double variable_height, 
+                                      bool variable_relative_to_fixed, 
+                                      bool variable_to_fixed, 
+                                      const PropagationOptions & opt) 
+{
+
+  //first, let's get all the profiles 
+
+  int nbearings = (max_bearing-min_bearing)/dbearing;
+  std::vector<double> bearings(nbearings); 
+  std::vector<std::vector<double> > elevation(nbearings); 
+  std::vector<std::vector<std::pair<double,double>> > lonlat(nbearings); 
+
+  SurfaceCoord x0 = fixed_pos.as(SurfaceCoord::WGS84); 
+  double dx = max_distance / (n_distance_points-1); 
+
+  const GeographicLib::Geodesic & geod = GeographicLib::Geodesic::WGS84(); 
+
+#ifdef ENABLE_OPENMP
+#pragma omp parallel for 
+#endif
+  for (int i = 0; i < nbearings; i++) 
+  {
+    double bearing = min_bearing + dbearing*i; 
+    bearings[i] = bearing; 
+    elevation[i].resize(n_distance_points); 
+    lonlat[i].resize(n_distance_points); 
+    GeographicLib::GeodesicLine l(geod, x0.y,x0.x, bearing); 
+    SurfaceCoord x(0,0,SurfaceCoord::WGS84); 
+    for (int j = 0; j < n_distance_points; j++) 
+    {
+      l.Position(j*dx, x.y, x.x); 
+      lonlat[i][j] = std::pair<double,double>(x.x,x.y); 
+      elevation[i][j] = dem.getHeight(x);
+    }
+  }
+
+  double fixed_elevation = elevation[0][0]; 
+
+  ///now let's create the requisite TGraph2Ds
+  //
+  result.pathloss.SetTitle("Path loss (dB); longitude; latitude");
+  result.terrain.SetTitle("Elevation (m); longitude; latitude");
+  result.mode.SetTitle("Propagation Mode; longitude; latitude");
+  result.err.SetTitle("Error; longitude; latitude");
+  int tgraph2d_points = 1+nbearings * (n_distance_points-1); //avoid multiply counting the center point! 
+
+  result.pathloss.Set(tgraph2d_points); 
+  result.terrain.Set(tgraph2d_points);
+  result.mode.Set(tgraph2d_points); 
+  result.err.Set(tgraph2d_points); 
+
+  result.pathloss.SetNpx(2*n_distance_points);
+  result.pathloss.SetNpy(2*n_distance_points);
+  result.terrain.SetNpx(2*n_distance_points);
+  result.terrain.SetNpy(2*n_distance_points);
+  result.mode.SetNpx(2*n_distance_points);
+  result.mode.SetNpy(2*n_distance_points);
+  result.err.SetNpx(2*n_distance_points);
+  result.err.SetNpy(2*n_distance_points);
+
+
+  
+  int ii = 0;
+  for (int i = 0; i < nbearings; i++) 
+  {
+    for (int j = 0; j < n_distance_points; j++) 
+    {
+      if ( j == 0 &&  i > 0) continue; //avoiid multiply counting the first point
+      double lon = lonlat[i][j].first;
+      double lat = lonlat[i][j].second;
+      result.pathloss.SetPoint(ii, lon,lat,-1);
+      result.terrain.SetPoint(ii, lon,lat,elevation[i][j]);
+      result.mode.SetPoint(ii, lon,lat,-1);
+      result.err.SetPoint(ii, lon,lat,-1);
+      ii++; 
+    }
+    //now reverse the profile if we're doing variable to fixed
+    if (variable_to_fixed) std::reverse(elevation[i].begin(), elevation[i].end());
+    
+  }
+
+
+  double * loss = result.pathloss.GetZ();
+  double * err = result.err.GetZ();
+  double * mode = result.mode.GetZ();
+  //alright, now actually start the propagation! 
+
+#ifdef ENABLE_OPENMP
+#pragma omp parallel for
+#endif 
+  for (int i = 0; i < nbearings; i++) 
+  {
+    PropagationResult res; 
+    for (int j = 0; j < n_distance_points; j++) 
+    {
+      //skip either the first or last point for i > 0 to avoid multiply counting the origin
+      if (j == (variable_to_fixed ? n_distance_points -1 : 0)  &&  i > 0) continue;
+
+      //slightly confusing because of the extra point in the first iteration 
+      int index =  i * (n_distance_points-1) + (i > 0)  + ( variable_to_fixed ?  n_distance_points - j - 1  : j);
+
+      double var_height = variable_relative_to_fixed ?  fixed_height+variable_height + fixed_elevation - elevation[i][j] : variable_height; 
+      if (var_height  < 0) continue; 
+
+      double tx_height = variable_to_fixed ? var_height : fixed_height;
+      double rx_height = variable_to_fixed ? fixed_height: var_height; 
+      int npts = variable_to_fixed ? n_distance_points - j : j; 
+      double * prf = variable_to_fixed ? &elevation[i][j] : &elevation[i][0]; 
+      propagate(npts, dx, prf, res, tx_height, rx_height, opt); 
+
+      if (isnan(res.dBloss) || res.dBloss < 0) loss[index] = -1; 
+      else loss[index] = res.dBloss; 
+      mode[index] = (double) res.imode;
+      err[index] = res.err;
+    }
+  }
+
+  
+  return 0; 
+}
+

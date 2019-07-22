@@ -2338,7 +2338,7 @@ static double deg2rad(double d)
 //***************************************************************************************
 
 
-void point_to_point_ITM(double elev[], double tht_m, double rht_m, double eps_dielect, double sgm_conductivity, double eno_ns_surfref, double frq_mhz, int radio_climate, int pol, double conf, double rel, double &dbloss, char *strmode, int &errnum)
+void point_to_point_ITM(double elev[], double tht_m, double rht_m, double eps_dielect, double sgm_conductivity, double eno_ns_surfref, double frq_mhz, int radio_climate, int pol, double conf, double rel, double &dbloss, char *strmode, int &errnum, int & imode)
 
 /******************************************************************************
 
@@ -2414,20 +2414,36 @@ Note that point_to_point has become point_to_point_ITM for use as the old ITM
 	q=prop.dist-propa.dla;
 
 	if (int(q)<0.0)
+  {
 		strcpy(strmode,"Line-Of-Sight Mode");
+    imode = 0;
+  }
 	else
 	{
 		if (int(q)==0.0)
+    {
 			strcpy(strmode,"Single Horizon");
+      imode = 1; 
+    }
 
 		else if (int(q)>0.0)
+    {
 			strcpy(strmode,"Double Horizon");
+      imode = 5; 
+    }
 
 		if (prop.dist<=propa.dlsa || prop.dist <= propa.dx)
+    {
 			strcat(strmode,", Diffraction Dominant");
+      imode++; 
+    }
 
 		else if (prop.dist>propa.dx)
+    {
 			strcat(strmode, ", Troposcatter Dominant");
+      imode+=2; 
+
+    }
 	}
 
 	dbloss=avar(zr,0.0,zc,prop,propv)+fs;
@@ -2437,7 +2453,7 @@ Note that point_to_point has become point_to_point_ITM for use as the old ITM
 
 
 // made clutter_height etc. not hardcoded! 
-void point_to_point(double elev[], double tht_m, double rht_m, double eps_dielect, double sgm_conductivity, double eno_ns_surfref, double frq_mhz, int radio_climate, int pol, double conf, double rel, double &dbloss, char *strmode, int &errnum,
+void point_to_point(double elev[], double tht_m, double rht_m, double eps_dielect, double sgm_conductivity, double eno_ns_surfref, double frq_mhz, int radio_climate, int pol, double conf, double rel, double &dbloss, char *strmode, int &errnum, int & imode, 
     double clutter_refractivity , double clutter_height , double clutter_density ,int mode_var,  double delta_h_diff = 0)
 
 /******************************************************************************
@@ -2553,25 +2569,43 @@ void point_to_point(double elev[], double tht_m, double rht_m, double eps_dielec
 	q=prop.dist-propa.dla;	
 			
 	if (int(q)<0.0)
+  {
 		strcpy(strmode,"L-o-S");
+    imode = 0;
+  }
 	else
 	{
 		if (int(q)==0.0)
+    {
 			strcpy(strmode,"1_Hrzn");
+      imode = 1; 
+    }
 
 		else if (int(q)>0.0)
+    {
 			strcpy(strmode,"2_Hrzn");
+      imode = 5;
+    }
 
 		if (prop.dist<=propa.dlsa || prop.dist<=propa.dx)
 	
 			if(int(prop.dl[1])==0.0)
+      {
 				strcat(strmode,"_Peak");			
+        imode +=3;
+      }
 			
 			else	
+      {
 				strcat(strmode,"_Diff");
+        imode++; 
+      }
 
 		else if (prop.dist>propa.dx)
+    {
 			strcat(strmode, "_Tropo");
+      imode += 2;
+    }
 	}
 
 	dbloss=avar(zr,0.0,zc,prop,propv)+fs;

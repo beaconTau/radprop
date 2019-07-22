@@ -44,7 +44,7 @@ namespace radprop
       CLIMATE_MARITIME_TEMPERATE_OVER_SEA
     } radio_climate = CLIMATE_CONTINENTAL_TEMPERATE;  
 
-    double surface_dielectric = 15;  //ice 
+    double surface_dielectric = 15;  // normal ground
     double surface_conductivity = 0.005; //
     double sea_level_refractivity = 301; 
     double frequency = 100; //MHz
@@ -66,6 +66,18 @@ namespace radprop
   struct PropagationResult 
   {
     double dBloss; 
+    enum  PropagationMode
+    {
+      PROPAGATION_MODE_LOS, 
+      SINGLE_HORIZON,
+      SINGLE_HORIZON_DIFFRACTION_DOMINANT,
+      SINGLE_HORIZON_TROPOSPHERIC_DOMINANT,
+      SINGLE_HORIZON_PEAK, 
+      DOUBLE_HORIZON, 
+      DOUBLE_HORIZON_DIFFRACTION_DOMINANT,
+      DOUBLE_HORIZON_TROPOSPHERIC_DOMINANT,
+      DOUBLE_HORIZON_PEAK 
+    } imode;
     std::string mode; 
     int err; 
   }; 
@@ -88,17 +100,21 @@ namespace radprop
 
 
   // For doing a vertical slice in a given direction. 
-  struct VerticalSliceResult
+  struct VerticalSliceResult : public TObject
   {
     TH2F pathloss; 
     TGraph terrain_profile; 
-
+    TH2C mode; 
+    TH2C err; 
+    bool variable_to_fixed; 
     void Draw() 
     {
       pathloss.Draw("col2z"); 
       terrain_profile.Draw("b1 same"); 
     }
 
+    virtual ~VerticalSliceResult() {;} 
+    ClassDef(VerticalSliceResult,1); 
   }; 
 
   int  propagateVerticalSlice( VerticalSliceResult & result, 
@@ -117,8 +133,8 @@ namespace radprop
                               const DEM & dem,
                               double distance = 100e3, 
                               double bearing = 0, 
-                              int nxbins = 1000, 
-                              int nybins = 100, 
+                              int nxbins = 5001, 
+                              int nybins = 201, 
                               double fixed_height =1, 
                               double max_variable_above_fixed = 1000, 
                               bool variable_to_fixed = true, 
@@ -132,27 +148,31 @@ namespace radprop
    *
    */
 
-   struct HorizontalWedgeResult
+   struct HorizontalWedgeResult : public TObject
    {
      TGraph2D pathloss; 
      TGraph2D terrain; 
+     TGraph2D mode; 
+     TGraph2D err; 
      TGraph wedge_bounds; 
      bool tx_relative_to_rx; 
+     ClassDef(HorizontalWedgeResult, 1); 
    };
 
-   /*
   int propagateHorizontalWedge (HorizontalWedgeResult & result, 
-                                const SurfaceCoord & rx_pos, 
+                                const SurfaceCoord & fixed_pos, 
+                                const DEM & dem, 
                                 double max_distance = 100e3, 
+                                int n_distance_points = 5001, 
                                 double min_bearing = 0, 
                                 double max_bearing = 360, 
-                                double dx = 100, 
-                                double rx_height = 1, 
-                                double tx_height_= 0,
-                                bool tx_relative_to_rx = true, //otherwise, relative to ground! For SPLAT! like behavior, this should be false!
+                                double dbearing = 0.5 , 
+                                double fixed_height = 1, 
+                                double variable_height_= 0,
+                                bool variable_relative_to_fixed = true, //otherwise, relative to ground! For SPLAT! like behavior, this should be false!
+                                bool variable_to_fixed = false, 
                                 const PropagationOptions & opt = PropagationOptions::defaultPropagation() 
-                               ) {return 1;}
-                               */
+                               );
 
 
 
