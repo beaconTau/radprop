@@ -1,4 +1,11 @@
 RF Propagation Utilities
 
-Requires ROOT, GeographicLib
-GDAL for reading in geotiff 
+Based on propagation code from SPLAT!
+
+Requires ROOT, GeographicLib,cmake 
+GDAL optional for reading in geotiff format (srtm format is built-in). 
+
+TODO: write better documentation! 
+
+
+
