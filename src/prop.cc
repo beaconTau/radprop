@@ -74,14 +74,16 @@ int radprop::propagateVerticalSlice (
    double fixed_height,
    double max_variable_above_fixed,
    bool variable_to_fixed, 
-   const PropagationOptions & opt)
+   const PropagationOptions & opt, 
+   SurfaceCoord * pts 
+   )
 {
 
   result.terrain_profile.Set(nxbins); 
 
   result.terrain_profile.SetTitle("Terrain Profile; meters from fixed; elevation"); 
   double dx; 
-  dem.getHeightsBetween(nxbins, fixed_pos, max_variable_pos, &dx, result.terrain_profile.GetY(), false, result.terrain_profile.GetX()); 
+  dem.getHeightsBetween(nxbins, fixed_pos, max_variable_pos, &dx, result.terrain_profile.GetY(), false, result.terrain_profile.GetX(), pts); 
   
   double distance = (nxbins-1)*dx; 
 
@@ -89,7 +91,7 @@ int radprop::propagateVerticalSlice (
   std::vector<double> maybe_profile; 
   const double  * profile = result.terrain_profile.GetY();
   double fixed_alt = profile[0]; 
-  double max_alt = fixed_alt + max_variable_above_fixed; 
+  double max_alt = fixed_alt + max_variable_above_fixed + fixed_height; 
   double min_alt = fixed_alt;
   if (variable_to_fixed) //we need to reverse it for that
   {
@@ -184,14 +186,14 @@ int radprop::propagateVerticalSlice(VerticalSliceResult & result,
                                     int nxbins, 
                                     int nybins, 
                                     double fixed_height, double max_variable_above_fixed,
-                                    bool variable_to_fixed, const PropagationOptions & opt)
+                                    bool variable_to_fixed, const PropagationOptions & opt, SurfaceCoord * pts)
 
 {
 
   SurfaceCoord x0 = fixed_pos.as(SurfaceCoord::WGS84); 
   SurfaceCoord x1(0,0,SurfaceCoord::WGS84); 
   GeographicLib::Geodesic::WGS84().Direct( x0.y, x0.x, bearing, distance, x1.y, x1.x); 
-  return propagateVerticalSlice(result, x0,x1, dem, nxbins, nybins, fixed_height, max_variable_above_fixed, variable_to_fixed, opt); 
+  return propagateVerticalSlice(result, x0,x1, dem, nxbins, nybins, fixed_height, max_variable_above_fixed, variable_to_fixed, opt,pts); 
 
 
 }

@@ -46,7 +46,7 @@ namespace radprop
        */ 
 
       double * getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop, double * dx = 0, 
-                                  double * fill = 0,  bool MSL = false, double * X =0 ) const; 
+                                  double * fill = 0,  bool MSL = false, double * X =0,   SurfaceCoord  * pts = 0) const; 
 
 
       const TH2 * getHist() const { return &the_hist; } 

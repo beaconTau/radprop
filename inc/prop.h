@@ -126,7 +126,9 @@ namespace radprop
                                double fixed_height =1, 
                                double max_variable_above_fixed = 1000,
                                bool variable_to_fixed = true, 
-                               const PropagationOptions & opt = PropagationOptions::defaultPropagation());
+                               const PropagationOptions & opt = PropagationOptions::defaultPropagation(), 
+                               SurfaceCoord * pts = 0 
+                               );
 
   int propagateVerticalSlice( VerticalSliceResult & result, 
                               const SurfaceCoord & fixed_pos, 
@@ -138,7 +140,9 @@ namespace radprop
                               double fixed_height =1, 
                               double max_variable_above_fixed = 1000, 
                               bool variable_to_fixed = true, 
-                              const PropagationOptions & opt = PropagationOptions::defaultPropagation()); 
+                              const PropagationOptions & opt = PropagationOptions::defaultPropagation(),
+                              SurfaceCoord * pts = 0 
+                              ); 
 
   /*
    * Horizontal Wedge. 

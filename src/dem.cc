@@ -381,7 +381,7 @@ double radprop::DEM::getHeight(const SurfaceCoord & where, bool msl) const
 
 
 double * radprop::DEM::getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop, double * fill_dx, 
-                                  double * fill,  bool msl , double * X ) const 
+                                  double * fill,  bool msl , double * X , SurfaceCoord * pts) const 
 {
 
   double * H = fill ?: new double[howmany]; 
@@ -410,6 +410,11 @@ double * radprop::DEM::getHeightsBetween(int howmany,  const SurfaceCoord & star
 
     H[i] = getHeight( SurfaceCoord(lon,lat, SurfaceCoord::WGS84), msl); 
     if (X) X[i] = x; 
+    if (pts) 
+    {
+      pts[i] = SurfaceCoord(lon,lat, SurfaceCoord::WGS84); 
+      pts[i].to(start.m); 
+    }
   }
 
   return H; 
