@@ -15,6 +15,7 @@ void testSlice(bool vary_tx = true)
   radprop::SurfaceCoord test(-118.2379382, 37.5898841);//approx beacon location 
   radprop::PropagationOptions opt; 
   opt.frequency = 50; //50 MHz 
+  opt.clutter_height = 0; 
   //opt.method = radprop::PropagationOptions::METHOD_ITM; 
 
   //make a 5 canvas thing 
@@ -27,7 +28,7 @@ void testSlice(bool vary_tx = true)
   {
     c->cd(ci++); 
     radprop::VerticalSliceResult * r = new radprop::VerticalSliceResult;
-    radprop::propagateVerticalSlice(*r,test,dem, 100e3, bearing, 2000, 200, 1, 1000, vary_tx,opt);
+    radprop::propagateVerticalSlice(*r,test,dem, 100e3, bearing, 2001, 201, 1, 1000, vary_tx,opt);
 
     r->pathloss.SetTitle(Form("path loss bearing = %d",bearing)); 
     r->Draw(); 
