@@ -129,6 +129,7 @@ static int setupFromGDAL(const char * file, TH2F & h, const double * bounds, int
     }
   }
 
+  delete ds; 
 
   return 0;
 }
