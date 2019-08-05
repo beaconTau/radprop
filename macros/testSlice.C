@@ -6,13 +6,13 @@
 
 
 
-void testSlice(bool vary_tx = false, double lat = 37.589267, double lon= -118.238092, double ant_height = 3)
+void testSlice(bool vary_tx = false, double lat = 37.582232, double lon= -118.248259, double ant_height = 3)
 {
 
   gStyle->SetPalette(kRainBow); 
   double bounds[4] = {-119,36,-116,39};
   radprop::DEM dem("srtm-hd/",0,bounds);
-  radprop::SurfaceCoord test(-118.2379382, 37.5898841);//approx beacon location 
+  radprop::SurfaceCoord test(lon,lat);//approx beacon location 
   radprop::PropagationOptions opt; 
   opt.frequency = 50; //50 MHz 
   opt.clutter_height = 0; 
