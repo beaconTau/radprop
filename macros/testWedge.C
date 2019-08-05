@@ -6,13 +6,13 @@
 
 
 
-radprop::HorizontalWedgeResult * testWedge(bool vary_tx = false)
+radprop::HorizontalWedgeResult * testWedge(bool vary_tx = false, double lon =-118.2379382, double lat = 37.5898841, double fixed_height = 3, double var_height = 1)
 {
 
   gStyle->SetPalette(kRainBow); 
   double bounds[4] = {-120,36,-115,40};
   radprop::DEM dem("srtm-hd/",0,bounds);
-  radprop::SurfaceCoord test(-118.2379382, 37.5898841);//approx beacon location 
+  radprop::SurfaceCoord test(lon,lat);//approx beacon location 
   radprop::PropagationOptions opt; 
   opt.frequency = 50; //50 MHz 
   //opt.method = radprop::PropagationOptions::METHOD_ITM; 
@@ -26,7 +26,7 @@ radprop::HorizontalWedgeResult * testWedge(bool vary_tx = false)
   radprop::HorizontalWedgeResult * r = new radprop::HorizontalWedgeResult;
   radprop::propagateHorizontalWedge(*r,test,dem, 100e3, 
 
-                                     5001, 0,360,0.5, 1, 1,false,vary_tx,opt); 
+                                     5001, 0,360,0.5, fixed_height, var_height,false,vary_tx,opt); 
 
   c->cd(1); 
   r->terrain.Draw("colz"); 
