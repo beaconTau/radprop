@@ -167,6 +167,8 @@ int radprop::propagateVerticalSlice (
   result.mode.SetStats(false); 
   result.err.SetStats(false); 
   result.pathloss.SetTitle("Path loss; surface distance (m); altitude (m); path loss (dB)"); 
+  result.pathloss.SetMinimum(0); 
+  result.pathloss.SetMaximum(200); 
   result.err.SetTitle("Path loss; surface distance (m); altitude (m); error code"); 
   result.mode.SetTitle("Path loss; surface distance (m); altitude (m); mode"); 
   result.terrain_profile.SetFillStyle(1); 
