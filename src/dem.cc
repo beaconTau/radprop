@@ -476,7 +476,7 @@ double * radprop::DEM::getHeightsBetween(int howmany,  const Path & path, double
     double x = i*dx; 
     l.Position(x, lat,lon); 
 
-    H[i] = getHeight( SurfaceCoord(lon,lat, SurfaceCoord::WGS84), mode == Height_MSL); 
+    H[i] = getHeight( SurfaceCoord(lon,lat, SurfaceCoord::WGS84), mode == Height_WGS84); 
     if (i == 0) H0 = H[0]; 
 
     if (X) 
