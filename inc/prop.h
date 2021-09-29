@@ -159,6 +159,7 @@ namespace radprop
      TGraph2D mode; 
      TGraph2D err; 
      TGraph wedge_bounds; 
+     double xmin,xmax,ymin,ymax; 
      bool tx_relative_to_rx; 
      ClassDef(HorizontalWedgeResult, 1); 
    };

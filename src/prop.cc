@@ -147,7 +147,7 @@ int radprop::propagateVerticalSlice (
                    variable_to_fixed ? alt - profile[x-1] : fixed_height, 
                    variable_to_fixed ? fixed_height : alt - profile[x-1], 
                    opt); 
-        if (isnan(res.dBloss) || res.dBloss < 0) arr[bin] = -1; 
+        if (std::isnan(res.dBloss) || res.dBloss < 0) arr[bin] = -1; 
         else
         {
 //          printf("%d %d %d: %g\n", x,y,bin,res.dBloss); 
@@ -256,17 +256,23 @@ int radprop::propagateHorizontalWedge(HorizontalWedgeResult & result, const Surf
   result.mode.Set(tgraph2d_points); 
   result.err.Set(tgraph2d_points); 
 
-  result.pathloss.SetNpx(2*n_distance_points);
-  result.pathloss.SetNpy(2*n_distance_points);
-  result.terrain.SetNpx(2*n_distance_points);
-  result.terrain.SetNpy(2*n_distance_points);
-  result.mode.SetNpx(2*n_distance_points);
-  result.mode.SetNpy(2*n_distance_points);
-  result.err.SetNpx(2*n_distance_points);
-  result.err.SetNpy(2*n_distance_points);
 
-
+  result.pathloss.SetNpx(500);
+  result.pathloss.SetNpy(500);
+  result.terrain.SetNpx(500);
+  result.terrain.SetNpy(500);
+  result.mode.SetNpx(500);
+  result.mode.SetNpy(500);
+  result.err.SetNpx(500);
+  result.err.SetNpy(500);
   
+
+  result.xmax=-200;
+  result.xmin=200;
+  result.ymax=-100;
+  result.ymin=100;
+  
+  int iborder = 0;
   int ii = 0;
   for (int i = 0; i < nbearings; i++) 
   {
@@ -280,10 +286,30 @@ int radprop::propagateHorizontalWedge(HorizontalWedgeResult & result, const Surf
       result.mode.SetPoint(ii, lon,lat,-1);
       result.err.SetPoint(ii, lon,lat,-1);
       ii++; 
+      if (j==n_distance_points-1) 
+      {
+        result.wedge_bounds.SetPoint(iborder++,lon,lat); 
+        if (lon > result.xmax) result.xmax = lon;
+        if (lon < result.xmin) result.xmin = lon;
+        if (lat > result.ymax) result.ymax = lat;
+        if (lat < result.ymin) result.ymin = lat;
+      }
     }
     //now reverse the profile if we're doing variable to fixed
     if (variable_to_fixed) std::reverse(elevation[i].begin(), elevation[i].end());
     
+  }
+
+  if (max_bearing-min_bearing < 360) 
+  {
+    double lon = x0.x; 
+    double lat = x0.y; 
+    result.wedge_bounds.SetPoint(iborder++, lon, lat); 
+    if (lon > result.xmax) result.xmax = lon;
+    if (lon < result.xmin) result.xmin = lon;
+    if (lat > result.ymax) result.ymax = lat;
+    if (lat < result.ymin) result.ymin = lat;
+ 
   }
 
 
@@ -315,7 +341,7 @@ int radprop::propagateHorizontalWedge(HorizontalWedgeResult & result, const Surf
       double * prf = variable_to_fixed ? &elevation[i][j] : &elevation[i][0]; 
       propagate(npts, dx, prf, res, tx_height, rx_height, opt); 
 
-      if (isnan(res.dBloss) || res.dBloss < 0) loss[index] = -1; 
+      if (std::isnan(res.dBloss) || res.dBloss < 0) loss[index] = -1; 
       else loss[index] = res.dBloss; 
       mode[index] = (double) res.imode;
       err[index] = res.err;
