@@ -15,19 +15,21 @@ void pointToPoint(double lon1, double lat1, double h1,
 
   double bounds[4] = {minlon,minlat, maxlon, maxlat}; 
 
-  radprop::DEM * dem = new radprop::DEM("srtm-hd/",0,bounds);
+  radprop::DEM * dem = new radprop::DEM("srtm-hd/",0,bounds,true);
 
   radprop::SurfaceCoord p1(lon1,lat1);
   radprop::SurfaceCoord p2(lon2,lat2);
 
   TGraph * profile = new TGraph(Npoints); 
   double dx; 
-  dem->getHeightsBetween(Npoints, p1,p2, &dx, profile->GetY(), false, profile->GetX()); 
+  radprop::DEM::Path path(p1,p2); 
+  
+  dem->getHeightsBetween(Npoints, path, &dx, profile->GetY(), radprop::DEM::Height_WGS84, profile->GetX()); 
 
   if (draw) 
   {
     TCanvas * c = new TCanvas; 
-    c->Divide(2,1); 
+    c->Divide(3,1); 
     c->cd(1); 
     dem->getHist()->Draw("col2z"); 
     TGraph * gpts = new TGraph(2); 
@@ -41,13 +43,23 @@ void pointToPoint(double lon1, double lat1, double h1,
     profile->SetLineWidth(2); 
     profile->SetTitle("Profile; surface distance (m); altitude (m)"); 
     profile->Draw("AB1"); 
+
+    TGraph * rel_profile = new TGraph(Npoints); 
+    dem->getHeightsBetween(Npoints, path, &dx, rel_profile->GetY(), radprop::DEM::Height_RelWithCurvature, rel_profile->GetX(), 0); 
+    c->cd(3); 
+    rel_profile->SetFillColor(1); 
+    rel_profile->SetFillStyle(1); 
+    rel_profile->SetLineWidth(2); 
+    rel_profile->SetTitle("Profile; horizontal distance (m); relative height (m)"); 
+    rel_profile->Draw("AB1"); 
+ 
   }
 
 
 
   radprop::PropagationResult r; 
   radprop::PropagationOptions opt; 
-  opt.frequency = 50; 
+  opt.frequency = freq; 
   opt.method = itwomv3 ? radprop::PropagationOptions::METHOD_ITWOMv3 :radprop::PropagationOptions::METHOD_ITM; 
  // opt.clutter_height = 1; 
 //gg  opt.sea_level_refractivity = 350; 

@@ -7,6 +7,7 @@
 #pragma link C++ namespace radprop+; 
 
 #pragma link C++ class radprop::DEM+;
+#pragma link C++ class radprop::DEM::Path+;
 #pragma link C++ class radprop::SurfaceCoord+;
 #pragma link C++ struct radprop::PropagationOptions+;
 #pragma link C++ struct radprop::PropagationResult+;

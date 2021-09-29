@@ -57,7 +57,8 @@ int radprop::propagate(int npts, const SurfaceCoord &  start, const SurfaceCoord
 {
   double dx; 
   std::vector<double> elev(npts); 
-  dem.getHeightsBetween(npts, start, stop, &dx, &elev[0]);
+  DEM::Path path(start,stop);
+  dem.getHeightsBetween(npts, path, &dx, &elev[0]);
   //this makes an extra copy, but otherwise we have to duplicate a lot of code... 
   return propagate(npts, dx, &elev[0], r, tx_height, rx_height, opt); 
 }
@@ -83,7 +84,8 @@ int radprop::propagateVerticalSlice (
 
   result.terrain_profile.SetTitle("Terrain Profile; meters from fixed; elevation"); 
   double dx; 
-  dem.getHeightsBetween(nxbins, fixed_pos, max_variable_pos, &dx, result.terrain_profile.GetY(), false, result.terrain_profile.GetX(), pts); 
+  DEM::Path path(fixed_pos, max_variable_pos);
+  dem.getHeightsBetween(nxbins, path, &dx, result.terrain_profile.GetY(), DEM::Height_WGS84, result.terrain_profile.GetX(), pts); 
   
   double distance = (nxbins-1)*dx; 
 

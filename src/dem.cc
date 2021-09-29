@@ -3,6 +3,7 @@
 #include "TSystemFile.h" 
 #include "TSystemDirectory.h" 
 #include <vector> 
+#include "TMath.h" 
 #include <zlib.h> 
 
 
@@ -13,6 +14,7 @@
 #include <GeographicLib/Geoid.hpp> 
 #include <GeographicLib/GeodesicLine.hpp> 
 #include <GeographicLib/Geodesic.hpp> 
+#include <GeographicLib/Ellipsoid.hpp> 
 
 static int dem_counter = 0;
 
@@ -444,40 +446,64 @@ double radprop::DEM::getHeight(const SurfaceCoord & where, bool msl) const
 }
 
 
-double * radprop::DEM::getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop, double * fill_dx, 
-                                  double * fill,  bool msl , double * X , SurfaceCoord * pts) const 
+double * radprop::DEM::getHeightsBetween(int howmany,  const Path & path, double * fill_dx, 
+                                  double * fill,  HeightMode mode , double * X , SurfaceCoord * pts) const 
 {
 
   double * H = fill ?: new double[howmany]; 
-  SurfaceCoord x0 = start.as(SurfaceCoord::WGS84); 
-  SurfaceCoord x1 = stop.as(SurfaceCoord::WGS84); 
 
-  //first solve the inverse geodesic problem 
+
   const GeographicLib::Geodesic & geod = GeographicLib::Geodesic::WGS84(); 
-  double az12, az21, s12; 
-  geod.Inverse(x0.y,x0.x, x1.y,x1.x, s12,az12, az21); 
-
 
   //now make the geodesic line
-  GeographicLib::GeodesicLine  l(geod, x0.y,x0.x, az12); 
+  GeographicLib::GeodesicLine  l(geod, path.getStart().y, path.getStart().x, path.getAzimuth()); 
 
 
-  double dx = s12/(howmany-1); 
+  double Rc = 0; 
+  if (mode == Height_RelWithCurvature) 
+  {
+    Rc = GeographicLib::Ellipsoid::WGS84().NormalCurvatureRadius(path.getStart().y, path.getAzimuth()); 
+  }
+
+  double dx = path.getDistance()/(howmany-1); 
   if (fill_dx) *fill_dx = dx; 
 
 
+  double H0 = 0; 
   for (int i = 0; i < howmany; i++) 
   {
     double lat, lon; 
     double x = i*dx; 
     l.Position(x, lat,lon); 
 
-    H[i] = getHeight( SurfaceCoord(lon,lat, SurfaceCoord::WGS84), msl); 
-    if (X) X[i] = x; 
+    H[i] = getHeight( SurfaceCoord(lon,lat, SurfaceCoord::WGS84), mode == Height_MSL); 
+    if (i == 0) H0 = H[0]; 
+
+    if (X) 
+    {
+      X[i] = x; 
+    }
+
+    if (mode == Height_RelWithCurvature) 
+    {
+      
+      double dh = Rc/cos(x/Rc)-Rc; 
+      H[i] -= dh; 
+      H[i]-=H0; // make it all relative to the start
+      if (X) //X in this case is horizontal distance
+      {
+        X[i] = sqrt(2*Rc*dh+dh*dh); 
+      }
+    }
+    else if (mode == Height_Relative) 
+    {
+      H[i]-=H0; // make it all relative to the start
+    }
+
+
     if (pts) 
     {
       pts[i] = SurfaceCoord(lon,lat, SurfaceCoord::WGS84); 
-      pts[i].to(start.m); 
     }
   }
 
@@ -486,3 +512,254 @@ double * radprop::DEM::getHeightsBetween(int howmany,  const SurfaceCoord & star
 
 
 
+
+radprop::DEM::Path::Path(const SurfaceCoord & start, const SurfaceCoord & end) 
+  : start(start.as(SurfaceCoord::WGS84)), end(end.as(SurfaceCoord::WGS84)) 
+{
+
+  const GeographicLib::Geodesic & geod = GeographicLib::Geodesic::WGS84(); 
+  geod.Inverse(start.y,start.x, end.y,end.x, distance,az, az_back); 
+}
+
+
+radprop::DEM::Path::Path(const SurfaceCoord & start, double azi, double distance) 
+  : start(start.as(SurfaceCoord::WGS84)), az(azi), distance(distance) 
+{
+  const GeographicLib::Geodesic & geod = GeographicLib::Geodesic::WGS84(); 
+  geod.Direct(start.y,start.x,azi, distance, end.y, end.x, az_back ); 
+}
+
+
+TH2* radprop::DEM::makeElevationAngleMap(const SurfaceCoord & where, int naz, double az_min, double az_max, double nr, double rmin, double rmax, double height, double noval, bool latlon, double dlat, double dlon) const
+{
+
+  SurfaceCoord x0 = where.as(SurfaceCoord::WGS84); 
+  TH2 * M = new TH2F("elevmap",Form("Elevation Angle Map around %g,%g\n ; Azimuth; Distance [m]; Elevation Angle ", x0.y,x0.x), naz, az_min, az_max, nr, rmin, rmax); 
+  M->SetDirectory(0); 
+
+  const GeographicLib::Geodesic & geod = GeographicLib::Geodesic::WGS84(); 
+  double daz = (az_max-az_min)/naz; 
+  double dr = (rmax-rmin)/nr; 
+
+  int nrsegs = rmax/dr; 
+
+  std::vector<double> hs(nrsegs+1); 
+  std::vector<double> ls(nrsegs+1); 
+
+
+
+  double lat_min = x0.y;
+  double lat_max = x0.y;
+  double lon_min = x0.x; 
+  double lon_max = x0.x; 
+
+  for (int i = 0; i < naz; i++) 
+  {
+    double az = az_min + (i+0.5) * daz; 
+    Path path(where,az,rmax); 
+
+    if (path.getEnd().x < lon_min) lon_min = path.getEnd().x; 
+    if (path.getEnd().y < lat_min) lat_min = path.getEnd().y; 
+    if (path.getEnd().x > lon_max) lon_max = path.getEnd().x; 
+    if (path.getEnd().y > lat_max) lat_max = path.getEnd().y; 
+
+    getHeightsBetween(nrsegs+1,path, 0,&hs[0], Height_RelWithCurvature,&ls[0]); 
+
+    for (int j = 0; j < nr; j++) 
+    {
+      int jj = j-(rmin/dr); 
+      double h = 0.5*(hs[jj]+hs[jj+1]); 
+      double l = 0.5*(ls[jj]+ls[jj+1]); 
+      double el = atan2(h-height, l); 
+
+      //ok now see if this is occluded; 
+
+      double y = height; 
+      double x = 0; 
+      bool ok = true; 
+      double dx = 10; // 10 meter step? 
+      double dy = dx * sin(el); 
+      int seg = 0; 
+      double l0 = ls[0]; 
+      double l1 = ls[1]; 
+      double dl = l1-l0; 
+      while (x < l)
+      {
+        if ( x > l1 ) 
+        {
+          l0 = l1;
+          seg++; 
+          l1 = ls[1+seg]; 
+          dl = l1-l0; 
+        }
+
+        double frac = (x-l0) / dl; 
+        double yterrain = (1-frac)*hs[seg]  + frac*hs[seg+1]; 
+        if ( y < yterrain) 
+        {
+          ok = false; 
+          break; 
+        }
+
+        x+=dx; 
+        y+=dy; 
+      }
+
+      if (!ok) 
+      {
+        M->SetBinContent(i+1,j+1, noval); 
+      }
+      else
+      {
+        M->SetBinContent(i+1,j+1, TMath::RadToDeg() * el); 
+      }
+
+    }
+  }
+
+  if (!latlon) return M; 
+
+  double nlat = (lat_max-lat_min)/dlat; 
+  double nlon = (lon_max-lon_min)/dlon; 
+
+  TH2 * M2 = new TH2F("elevmaplatlon", M->GetTitle(), nlon, lon_min,lon_max, nlat, lat_min, lat_max); 
+  M2->SetDirectory(0); 
+  M2->GetXaxis()->SetTitle("Longitude"); 
+  M2->GetYaxis()->SetTitle("Latitude"); 
+
+
+  for (int i = 1; i <=nlon; i++) 
+  {
+    double lon = M2->GetXaxis()->GetBinCenter(i); 
+    for (int j = 1; j <=nlat; j++) 
+    {
+      double lat = M2->GetYaxis()->GetBinCenter(j); 
+      double r, az; 
+      geod.Inverse(x0.y, x0.x, lat, lon, r, az); 
+      if (r < rmax && r > rmin && az < az_max && az > az_min) 
+      {
+        M2->SetBinContent(i,j,M->Interpolate(az,r)); 
+      }
+      else
+      {
+        M2->SetBinContent(i,j,noval); 
+      }
+    }
+  }
+
+  delete M; 
+  return M2; 
+}
+
+
+TH2* radprop::DEM::makeInverseElevationAngleMap(const SurfaceCoord & where, int naz, double az_min, double az_max, 
+                                                int nel, double elmin, double elmax, double height, 
+                                                double max_r, double noval, TH2 ** lat_map, TH2 ** lon_map) const
+{
+
+  SurfaceCoord x0 = where.as(SurfaceCoord::WGS84); 
+  TH2 * M = new TH2F("invelevmap",Form("Distance Map around %g,%g\n ; Azimuth [deg]; Elevation Angle [deg]; Surface Distance [m] ", x0.y,x0.x), naz, az_min, az_max, nel, elmin, elmax); 
+  M->SetDirectory(0); 
+
+  if (lat_map) 
+  {
+    *lat_map = new TH2F("invelevmaplat",Form("Latitude Map around %g,%g\n ; Azimuth [deg]; Elevation Angle [deg]; Latitude", x0.y,x0.x), naz, az_min, az_max, nel, elmin, elmax); 
+    (*lat_map)->SetDirectory(0); 
+  }
+
+  if (lon_map) 
+  {
+
+    *lon_map = new TH2F("invelevmaplon",Form("Longitude Map around %g,%g\n ; Azimuth [deg]; Elevation Angle [deg]; Longitude ", x0.y,x0.x), naz, az_min, az_max, nel, elmin, elmax); 
+    (*lon_map)->SetDirectory(0); 
+  }
+
+
+  const GeographicLib::Geodesic & geod = GeographicLib::Geodesic::WGS84(); 
+  double daz = (az_max-az_min)/naz; 
+  double del = (elmax-elmin)/nel; 
+
+  int nrsegs = max_r * 0.01;  // 10 m segments? 
+
+  std::vector<double> hs(nrsegs+1); 
+  std::vector<double> ls(nrsegs+1); 
+
+
+  double lonlat_noval = noval < -180 && noval > 180 ? noval : -999; 
+
+  for (int i = 0; i < naz; i++) 
+  {
+    double az = az_min + (i+0.5) * daz; 
+    Path path(where,az,max_r); 
+
+    double dr; 
+    getHeightsBetween(nrsegs+1,path, &dr,&hs[0], Height_RelWithCurvature,&ls[0]); 
+
+    for (int j = 0; j < nel;  j++) 
+    {
+      double el = TMath::DegToRad() * (elmin + (j+0.5) * del); 
+
+      //ok now see if this is occluded; 
+
+      double y = height; 
+      double x = 0; 
+      bool ok = false; 
+      double dx = 10; // 10 meter step? 
+      double dy = dx * sin(el); 
+      int seg = 0; 
+      double l0 = ls[0]; 
+      double l1 = ls[1]; 
+      double dl = l1-l0; 
+      double r = noval; 
+      while (x < ls[nrsegs])
+      {
+        if ( x > l1 ) 
+        {
+          l0 = l1;
+          seg++; 
+          l1 = ls[1+seg]; 
+          dl = l1-l0; 
+        }
+
+        double frac = (x-l0) / dl; 
+        double yterrain = (1-frac)*hs[seg]  + frac*hs[seg+1]; 
+        if ( y < yterrain) 
+        {
+          r = dr * (seg+frac); 
+          ok = true; 
+
+          break; 
+        }
+
+        x+=dx; 
+        y+=dy; 
+      }
+
+      M->SetBinContent(i+1,j+1, r); 
+
+      if ( lat_map || lon_map) 
+      {
+        double lat = lonlat_noval, lon = lonlat_noval; 
+        if (ok) 
+        {
+          geod.Direct(x0.y,x0.x, az, r, lat,lon); 
+        }
+
+        if (lat_map) 
+        {
+          (*lat_map)->SetBinContent(i+1, j+1, lat);  
+        }
+
+        if (lon_map) 
+        {
+          (*lon_map)->SetBinContent(i+1, j+1, lon);  
+        }
+      }
+
+    }
+  }
+
+
+
+  return M;
+}

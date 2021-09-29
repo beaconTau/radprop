@@ -41,12 +41,53 @@ namespace radprop
        * */ 
       double getHeight(const SurfaceCoord & where,  bool MSL=false ) const;
       
-      /** Retrieves howmany heights between two points. If fill is passed, it will be filled (and returned) otherwise a new array is allocated. if X is passed, the distances are 
-       *  from the start are filled there (useful for plotting). 
-       */ 
 
-      double * getHeightsBetween(int howmany,  const SurfaceCoord & start, const SurfaceCoord & stop, double * dx = 0, 
-                                  double * fill = 0,  bool MSL = false, double * X =0,   SurfaceCoord  * pts = 0) const; 
+      class Path
+      {
+        public: 
+
+          Path(const SurfaceCoord & start, const SurfaceCoord & end);
+          Path(const SurfaceCoord & start, double az, double distance); 
+          double getDistance() const { return distance; } 
+          double getAzimuth() const { return az; } 
+          double getReverseAzimuth() const { return az_back; } 
+
+          //guaranteed to be in WGS84 
+          const SurfaceCoord & getStart() const { return start; } 
+          const SurfaceCoord & getEnd() const { return end; } 
+
+        private: 
+          SurfaceCoord start; 
+          SurfaceCoord end; 
+          double az; 
+          double az_back; 
+          double distance; 
+      }; 
+
+      /** Retrieves howmany heights between two points. If fill is passed, it
+       * will be filled (and returned) otherwise a new array is allocated. if X
+       * is passed, the distances are from the start are filled there (useful
+       * for plotting). If pts is passed, they are filled with the points.        */ 
+
+      enum HeightMode
+      {
+        Height_WGS84, 
+        Height_MSL, 
+        Height_Relative, 
+        Height_RelWithCurvature
+      };
+
+      double * getHeightsBetween(int howmany,  const Path & path, double * dx = 0, 
+                                  double * fill = 0,  HeightMode  mode = Height_WGS84, double * X =0,   SurfaceCoord  * pts = 0) const; 
+
+
+      TH2 * makeElevationAngleMap(const SurfaceCoord & where, int naz, double az_min, double az_max, double nr, double rmin, double rmax, 
+          double height_off_ground = 0, double noval = -999, 
+          bool tolatlon = false, double dlat = 0.01, double dlon = 0.01) const; 
+
+      TH2 * makeInverseElevationAngleMap(const SurfaceCoord & where, int naz, double az_min, double az_max, int nel, double elmin, double elmax,
+          double height_off_ground = 0, double rmax = 300e3, double noval = -999, 
+           TH2** lat_map = 0, TH2** lon_map = 0) const; 
 
 
       const TH2 * getHist() const { return &the_hist; } 
