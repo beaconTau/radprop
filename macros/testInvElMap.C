@@ -1,8 +1,8 @@
-double lon =-118.2379382; 
-double lat = 37.5898841;
+double lon =-118.23761867; 
+double lat = 37.589339;
 double bounds[4] = {-121,35,-114,41};
 
-void testInvElMap(double height = 3, double rmax = 300e3)
+void testInvElMap(double height = 4, double rmax = 300e3)
 {
 
   radprop::SurfaceCoord x0(lon,lat); 
@@ -10,7 +10,7 @@ void testInvElMap(double height = 3, double rmax = 300e3)
 
   TFile f("beacon-site.root","RECREATE"); 
   TH2 * lon, *lat; 
-  TH2 * h =  dem.makeInverseElevationAngleMap(x0, 1440,-180,180,300,-20,10,height, rmax, -999,  &lat, &lon); 
+  TH2 * h =  dem.makeInverseElevationAngleMap(x0, 3600,-180,180,400,-30,10,height, rmax, -999,  &lat, &lon); 
   h->SetMinimum(0); 
   h->SetStats(0); 
 
