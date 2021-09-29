@@ -3,6 +3,7 @@
 #include "TSystemFile.h" 
 #include "TSystemDirectory.h" 
 #include <vector> 
+#include <zlib.h> 
 
 
 #ifdef HAVE_GDAL
@@ -163,36 +164,67 @@ static int setupFromSRTM(const char * dir, TH2 & h, const double * bounds, bool 
 
     TString fname = f->GetName(); 
 
-    if (!fname.EndsWith(".hgt")) continue; 
+    if (!fname.EndsWith(".hgt") && !fname.EndsWith(".hgt.gz")) continue; 
     gSystem->GetPathInfo(Form("%s/%s", dir, fname.Data()), st); 
 
+    bool gzipped = fname.EndsWith("gz"); 
 
-    if (st.fSize == 25934402 ) 
-    {
-      n_hd++; 
-      hds.push_back(true); 
-    }
-    else if (st.fSize == 2884802 )
-    {
-      hds.push_back(false); 
-      n_normal++; 
-    }
-    else
-    {
-      continue; 
-    }
 
+    if (verbose) printf("Considering %s/%s\n", dir, fname.Data()); 
+    
     char lon_sign; 
     char lat_sign;
     int ilon; 
     int ilat; 
-    sscanf(fname.Data(),"%c%d%c%d.hgt", &lat_sign, &ilat, &lon_sign,&ilon); 
+    sscanf(fname.Data(),gzipped ? "%c%d%c%d.hgt.gz" : "%c%d%c%d.hgt", &lat_sign, &ilat, &lon_sign,&ilon); 
 
     double lon = ilon;
     double lat = ilat; 
     if (lon_sign == 'W') lon*=-1; 
     if (lat_sign == 'S') lat*=-1; 
-    
+
+    if (bounds && lat+1 < bounds[1]) continue; 
+    if (bounds && lat >  bounds[3]) continue; 
+    if (bounds && lon+1 < bounds[0]) continue; 
+    if (bounds && lon >  bounds[2]) continue; 
+ 
+    if (verbose) printf("  in bounds!\n"); 
+
+    int size = 0; 
+
+    if (gzipped) 
+    {
+      //read the last four bytes and hope! 
+      FILE * f = fopen(Form("%s/%s",dir,fname.Data()),"r"); 
+      fseek(f, st.fSize-4,SEEK_SET); 
+      fread(&size,4,1,f); 
+      fclose(f); 
+    }
+    else
+    {
+      size = st.fSize; 
+    }
+
+
+    if (size == 25934402 ) 
+    {
+      n_hd++; 
+      if (verbose) printf(" is HD!\n"); 
+      hds.push_back(true); 
+    }
+    else if (size == 2884802 )
+    {
+      hds.push_back(false); 
+      if (verbose) printf(" is SD!\n"); 
+      n_normal++; 
+    }
+    else
+    {
+      if (verbose) printf(" Wrong size (%d)\n", size); 
+      continue; 
+    }
+
+   
     if (min_lat > lat) min_lat = lat;
     if (max_lat < lat+1) max_lat = lat+1; 
     if (min_lon > lon) min_lon = lon;
@@ -201,7 +233,7 @@ static int setupFromSRTM(const char * dir, TH2 & h, const double * bounds, bool 
     corners.push_back(std::pair<double,double>(lon,lat)); 
     files.push_back(fname); 
     if (verbose) 
-      printf("Loaded %s SRTM file %s (%g,%g)\n", hds[hds.size()-1] ? "HD" : "Normal" , fname.Data(), lat, lon); 
+      printf("Adding %s SRTM file %s (%g,%g) to list \n", hds[hds.size()-1] ? "HD" : "Normal" , fname.Data(), lat, lon); 
 
   }
 
@@ -251,14 +283,30 @@ static int setupFromSRTM(const char * dir, TH2 & h, const double * bounds, bool 
     if (corners[i].first > xmax) continue; 
     if (corners[i].second > ymax) continue; 
 
+
+    if (verbose) 
+       printf("USING  %s SRTM file %s\n", hds[hds.size()-1] ? "HD" : "Normal" , files[i].Data()); 
+
     //otherwise, let's load it into memory
 
     TString this_file = Form("%s/%s",dir,files[i].Data()); 
-    FILE * f = fopen(this_file.Data(),"rb"); 
+    bool gzipped = this_file.EndsWith(".gz"); 
 
     int N = hds[i]? 3601 : 1201; 
-    int rd = fread(&data[0], 2, N*N, f); 
-    if (rd != N*N) 
+    int rd = 0;
+    if (gzipped) 
+    {
+      gzFile f= gzopen(this_file.Data(),"r"); 
+      rd = gzread(f,&data[0],2*N*N); 
+      gzclose(f); 
+    }
+    else
+    {
+      FILE * f = fopen(this_file.Data(),"rb"); 
+      rd = fread(&data[0],1 , 2*N*N, f); 
+      fclose(f); 
+    }
+    if (rd != 2*N*N) 
     {
       fprintf(stderr,"Hmm, couldn't read all of %s\n", this_file.Data()); 
       return 1; 
