@@ -415,7 +415,22 @@ double radprop::DEM::getHeight(const SurfaceCoord & where, bool msl) const
 
   //why the hell is interpolate not const? 
   TH2 * h = (TH2*) (&the_hist); 
+
+  //if out of bounds, assume 0? 
+  if (x > h->GetXaxis()->GetXmax() || x < h->GetXaxis()->GetXmin() || y > h->GetYaxis()->GetXmax() || y < h->GetYaxis()->GetXmin() )
+  {
+    if (msl) return 0; 
+
+
+    SurfaceCoord wgs84 = where.as(SurfaceCoord::WGS84); 
+    double alt = geoid.ConvertHeight(wgs84.y, wgs84.x, 0, GeographicLib::Geoid::ELLIPSOIDTOGEOID); 
+
+    return alt; 
+
+  }
+
   
+
   double alt = h->Interpolate(x,y); 
 
   if (msl) 
